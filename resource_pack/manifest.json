@@ -1,0 +1,30 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Leo's More TNT Textures v1.0.0",
+    "description": "Looks for Leo's More TNT. (v1.0.0)",
+    "uuid": "316703b9-26d2-4884-baab-080263b7fe7c",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      30
+    ]
+  },
+  "modules": [
+    {
+      "description": "Leo's mod 02 looks",
+      "type": "resources",
+      "uuid": "58e9ee87-44f6-4c18-a43e-34a1e03dfa85",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}
