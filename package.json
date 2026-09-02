@@ -11,7 +11,8 @@
     "version": "node tools/sync-version.mjs && git add pack/manifest.json resource_pack/manifest.json",
     "build": "npm run check && node tools/sync-version.mjs && esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=pack/scripts/main.js",
     "package": "npm run build && node tools/package-mcaddon.mjs",
-    "icon": "node tools/make-icon.mjs"
+    "icon": "node tools/make-icon.mjs",
+    "textures": "node tools/make-textures.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
