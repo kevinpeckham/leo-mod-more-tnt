@@ -1,16 +1,15 @@
 {
-  "format_version": "1.26.40",
+  "format_version": "1.12",
   "minecraft:recipe_shapeless": {
     "description": {
-      "identifier": "tnt:tnt_2x"
+      "identifier": "tnt:tnt_2x_from_tnt"
     },
     "tags": ["crafting_table"],
+    "priority": 0,
     "ingredients": [
       {
-        "item": "minecraft:tnt"
-      },
-      {
-        "item": "minecraft:tnt"
+        "item": "minecraft:tnt",
+        "count": 2
       }
     ],
     "result": {
