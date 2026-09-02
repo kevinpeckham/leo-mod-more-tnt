@@ -13,10 +13,14 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SERVER_DIR="${SERVER_DIR:-/opt/bedrock-server}"
+SERVER_DIR="${SERVER_DIR:-/opt/bedrock-tnt}"
 PACK_NAME="leo-mod-more-tnt"
 RP_NAME="leo-mod-more-tnt-rp"
-TMUX_SESSION="${TMUX_SESSION:-bds}"
+TMUX_SESSION="${TMUX_SESSION:-tnt}"
+# Leo's World and the TNT world each run their own tmux server, so that one
+# crashing can't take the other down. Ours is on the "tnt" socket.
+TMUX_SOCKET="${TMUX_SOCKET:-tnt}"
+tmux_() { tmux -L "$TMUX_SOCKET" "$@"; }
 
 PULL=1
 ALLOW_STALE=0
@@ -147,22 +151,22 @@ activate "$WORLD_DIR/world_behavior_packs.json" "$PACK_UUID" "$PACK_VERSION" "$P
 activate "$WORLD_DIR/world_resource_packs.json" "$RP_UUID" "$RP_VERSION" "$RP_LABEL"
 
 # ---------------------------------------------------------------- reload ----
-if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+if tmux_ has-session -t "$TMUX_SESSION" 2>/dev/null; then
   say "Hot-reloading the running server"
-  tmux send-keys -t "$TMUX_SESSION" reload Enter
+  tmux_ send-keys -t "$TMUX_SESSION" reload Enter
   sleep 3
   echo
   echo "--- server console (last 15 lines) ---"
-  tmux capture-pane -p -t "$TMUX_SESSION" | grep -v '^$' | tail -15
+  tmux_ capture-pane -p -t "$TMUX_SESSION" | grep -v '^$' | tail -15
   echo "--------------------------------------"
   echo
-  echo "Watch the console live with:  tmux attach -t $TMUX_SESSION   (detach: Ctrl-B then D)"
+  echo "Watch the console live with:  tmux -L $TMUX_SOCKET attach -t $TMUX_SESSION   (detach: Ctrl-B then D)"
 
   if [[ "${RP_CHANGED:-0}" -gt 0 ]]; then
     echo
     printf '\033[1;33m%s\033[0m\n' "NOTE: the resource pack changed (textures / how things look)."
     printf '\033[1;33m%s\033[0m\n' "      'reload' does not push those to the iPads. To see them:"
-    printf '\033[1;33m%s\033[0m\n' "        sudo systemctl restart bedrock-server   # then rejoin on the iPads"
+    printf '\033[1;33m%s\033[0m\n' "        sudo systemctl restart bedrock-tnt   # then rejoin on the iPads"
     printf '\033[1;33m%s\033[0m\n' "      Script-only changes never need this."
   fi
 else

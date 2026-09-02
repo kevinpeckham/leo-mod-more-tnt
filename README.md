@@ -1,8 +1,18 @@
 # Leo's More TNT 💥
 
-Leo's second Minecraft Bedrock add-on. Built the same way as
-[leo-mod-01](../leo-mod-01), and it runs in the **same world, on the same
-server** — both mods load together.
+Leo's second Minecraft Bedrock add-on. Built the same way as [leo-mod-01](../leo-mod-01), but it gets **its own world
+on its own server**, so experiments here can't disturb Leo's builds next door.
+
+| | Leo's World | TNT World |
+|---|---|---|
+| Address | `100.68.103.100:19132` | `100.68.103.100:19134` |
+| Mod | Leo's Mod 01 | Leo's More TNT |
+| Service | `bedrock-server` | `bedrock-tnt` |
+| Console | `tmux attach -t bds` | `tmux -L tnt attach -t tnt` |
+| Files | `/opt/bedrock-server` | `/opt/bedrock-tnt` |
+
+Add the second one on the iPads as a new server entry — same address, port
+**19134**.
 
 ## What's here right now
 
@@ -49,6 +59,10 @@ Leo wants a mob that looks like something new, mod 01 has a full worked example
 of every piece — entity files, loot tables, textures, render controllers — plus
 a recipe in its README, and a `tools/make-diamond-textures.mjs` that recolours
 Mojang's own art. Copy from there.
+
+Name custom things `tnt:` rather than `leo:` — mod 01 owns the `leo:`
+namespace next door, and separate namespaces mean the two can never collide
+even if the mods ever share a world again.
 
 **One rule worth learning early:** whenever the resource pack changes, bump the
 version (`npm version patch`) before deploying. Minecraft caches resource packs
