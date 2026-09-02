@@ -22,9 +22,12 @@ import {
 const TNT_2X = "tnt:tnt_2x";
 const LIGHTER = "minecraft:flint_and_steel";
 
-// Vanilla TNT explodes with a power of 4, so double is 8. This is the number to
-// change if Leo wants it bigger — but be careful, it grows fast.
-const BLAST_RADIUS = 8;
+// Vanilla TNT explodes with a power of 4, and createExplosion takes that same
+// number. 8 was wrong: doubling the radius makes roughly EIGHT times the hole,
+// because a sphere grows with the cube of its radius. Two TNT side by side make
+// about twice the hole, and twice the volume means radius x cube-root-of-2,
+// which is 4 x 1.26 ≈ 5.
+const BLAST_RADIUS = 5;
 
 // 4 seconds, the same fuse as ordinary TNT, so it feels familiar.
 const FUSE_TICKS = 80;
