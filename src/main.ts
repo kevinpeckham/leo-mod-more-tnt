@@ -1,4 +1,5 @@
 import {
+  type BlockPermutation,
   type Dimension,
   type Player,
   system,
@@ -56,7 +57,12 @@ function lightTheFuse(
 
   // Take the block away now and explode in a moment. That's what makes it a
   // fuse rather than an instant bang, and it gives you time to run.
-  dimension.getBlock(location)?.setType("minecraft:air");
+  //
+  // We remove this one ourselves, so no explosion reports it — write it down
+  // here or undo would put the crater back but not the TNT that made it.
+  const lit = dimension.getBlock(location);
+  if (lit) remember(dimension, location, lit.permutation);
+  lit?.setType("minecraft:air");
   dimension.playSound("random.fuse", centre);
   litBy?.sendMessage(`§c💥 ${tnt.name} lit — run!`);
 
@@ -77,6 +83,97 @@ world.afterEvents.playerInteractWithBlock.subscribe((event) => {
   lightTheFuse(block.dimension, block.location, tnt, FUSE_TICKS, player);
 });
 
+// ── Undo ────────────────────────────────────────────────────────────
+// Every block an explosion destroys gets written down here first, along with
+// exactly what it was. Undo walks the list backwards and puts them all back,
+// so Leo can flatten somewhere, look at the crater, and have it as it was.
+//
+// Backwards matters: if the same spot got blown up twice, the OLDEST note is
+// what it looked like to begin with, and going in reverse means that one is
+// applied last.
+//
+// Two ways to undo, because one is easier to type and the other is easier to
+// reach mid-game:
+//   • hold a CLOCK and use it        (turning back time — no typing)
+//   • /scriptevent tnt:undo          (needs cheats, which the TNT world has)
+type DestroyedBlock = {
+  dimensionId: string;
+  location: Vector3;
+  permutation: BlockPermutation;
+};
+
+const UNDO_TOOL = "minecraft:clock";
+// A 5x blast is a few hundred blocks, so this is a lot of testing. It stops the
+// list growing forever if nobody ever undoes.
+const MAX_REMEMBERED = 60000;
+
+let destroyed: DestroyedBlock[] = [];
+let warnedFull = false;
+
+function remember(
+  dimension: Dimension,
+  location: Vector3,
+  permutation: BlockPermutation,
+) {
+  if (destroyed.length >= MAX_REMEMBERED) {
+    if (!warnedFull) {
+      world.sendMessage("§7(Undo memory is full — undo now to start again.)");
+      warnedFull = true;
+    }
+    return;
+  }
+  destroyed.push({
+    dimensionId: dimension.id,
+    location: { x: location.x, y: location.y, z: location.z },
+    permutation,
+  });
+}
+
+function undoEverything(player?: Player) {
+  if (destroyed.length === 0) {
+    player?.sendMessage("§7Nothing to undo — nothing has exploded yet.");
+    return;
+  }
+
+  let restored = 0;
+  for (let i = destroyed.length - 1; i >= 0; i--) {
+    const note = destroyed[i];
+    // The chunk may not be loaded any more; skip rather than fail the lot.
+    try {
+      const block = world
+        .getDimension(note.dimensionId)
+        .getBlock(note.location);
+      if (!block) continue;
+      block.setPermutation(note.permutation);
+      restored++;
+    } catch {
+      // Out of the world, or unloaded. Nothing sensible to do about it.
+    }
+  }
+
+  destroyed = [];
+  warnedFull = false;
+  const message = `§a↩ Put back ${restored} blocks.`;
+  if (player) player.sendMessage(message);
+  else world.sendMessage(message);
+}
+
+// Hold a clock and use it.
+world.afterEvents.itemUse.subscribe((event) => {
+  if (event.itemStack?.typeId !== UNDO_TOOL) return;
+  undoEverything(event.source);
+});
+
+// Or type /scriptevent tnt:undo
+system.afterEvents.scriptEventReceive.subscribe((event) => {
+  if (event.id !== "tnt:undo") return;
+  const player =
+    event.sourceEntity instanceof Object && "sendMessage" in event.sourceEntity
+      ? (event.sourceEntity as Player)
+      : undefined;
+  undoEverything(player);
+});
+
 // ── Chain reactions ─────────────────────────────────────────────────
 // Ordinary TNT caught in an explosion is primed rather than broken, which is
 // why a stack of it cascades. Ours is a custom block, so the game just breaks
@@ -84,6 +181,14 @@ world.afterEvents.playerInteractWithBlock.subscribe((event) => {
 // which is the only reason this is possible: by the time we hear about it, the
 // block is already gone.
 world.afterEvents.blockExplode.subscribe((event) => {
+  // Write down every block any explosion destroys, ours or vanilla's, so undo
+  // can put the whole crater back.
+  remember(
+    event.dimension,
+    event.block.location,
+    event.explodedBlockPermutation,
+  );
+
   const tnt = TNT_BY_BLOCK.get(event.explodedBlockPermutation.type.id);
   if (!tnt) return;
 
