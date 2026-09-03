@@ -16,12 +16,20 @@ Add the second one on the iPads as a new server entry — same address, port
 
 ## What's here right now
 
-**2x TNT** — Leo's first idea for this mod.
+Two kinds of bigger TNT, and they chain.
 
-- **How to get it:** put **2 TNT** in a crafting table, anywhere in the grid
-- **How it looks:** like TNT, but the label on the side says **2x** instead
-- **What it does:** light it with flint and steel and it blows a hole about
-  twice the size of ordinary TNT, on the same 4-second fuse
+| | Craft it from | Label | Blast |
+|---|---|---|---|
+| **2x TNT** | 2 TNT | `2x` | about two TNT's worth |
+| **5x TNT** | 5 TNT | `5x` | about five TNT's worth |
+
+Anywhere in the crafting grid — the recipes are shapeless, so the pattern
+doesn't matter. Light with flint and steel; same 4-second fuse as ordinary TNT.
+
+**They chain.** Caught in someone else's blast, they light rather than simply
+breaking — at full strength, on a short random fuse, exactly as vanilla TNT
+behaves. Rows of them ripple. Mixed chains work too: vanilla TNT sets off
+Leo's, and Leo's sets off vanilla.
 
 It takes four files working together, which is worth knowing before adding the
 next one:
@@ -31,18 +39,35 @@ next one:
 | `pack/blocks/tnt_2x.json` | the block exists, and what it's made of |
 | `pack/recipes/tnt_2x.json` | 2 TNT makes one |
 | `resource_pack/textures/` + `terrain_texture.json` | what it looks like |
-| `src/main.ts` | what happens when you light it |
+| `src/main.ts` | what happens when you light it, and the chaining |
 
 Plus a name in `resource_pack/texts/en_US.lang`, or the game shows a raw key.
 
-### Changing it
+### Adding another one
 
-- **Bigger or smaller bang:** `BLAST_RADIUS` in `src/main.ts`. Careful — it's a
-  radius, and a ball grows with the *cube* of its radius, so 8 isn't twice as
-  big as 4, it's about eight times. Vanilla TNT is 4; ours is 5, which is about
-  double the hole.
-- **Different label:** the `GLYPHS` block at the top of `tools/make-textures.mjs`
-  is a little picture made of `#` and `.`. Change it and run `npm run textures`.
+The kinds of TNT are a table at the top of `src/main.ts`:
+
+```ts
+const TNT_TYPES = [
+  { block: "tnt:tnt_2x", name: "2x TNT", radius: 5 },
+  { block: "tnt:tnt_5x", name: "5x TNT", radius: 7 },
+];
+```
+
+A 10x needs: a line there, a label in `LABELS` in `tools/make-textures.mjs`,
+a block and a recipe copied in `pack/`, and a name in the `.lang` file. No new
+logic.
+
+**Picking the radius.** It's the number Minecraft calls explosion *power*, and
+vanilla TNT is 4. It is **not** how many blocks across, and doubling it does
+**not** double the hole — a ball grows with the **cube** of its radius, so 8 is
+about eight times the hole, not two. For a hole N times bigger:
+
+> radius = 4 × ∛N   →   2x is 5, 5x is 7, 10x would be about 9
+
+**Changing a label.** The `LABELS` list holds little pictures made of `#` and
+`.` — a hash is ink, a dot is the label showing through. Five rows tall, because
+four can't make a legible 5. Edit and run `npm run textures`.
 
 ## Commands
 
