@@ -33,10 +33,18 @@ const LIGHTER = "minecraft:flint_and_steel";
 // 4 seconds, the same fuse as ordinary TNT, so it feels familiar.
 const FUSE_TICKS = 80;
 
+// When one of these is caught in someone else's blast it lights rather than
+// simply breaking — that's what makes TNT chain. Vanilla gives the caught TNT
+// a SHORT RANDOM fuse instead of a fixed one, so a row of them ripples along
+// rather than going off as a single lump. Half a second to a second and a bit.
+const CHAIN_FUSE_MIN = 10;
+const CHAIN_FUSE_MAX = 30;
+
 function lightTheFuse(
   dimension: Dimension,
   location: Vector3,
   tnt: { name: string; radius: number },
+  fuseTicks: number,
   litBy?: Player,
 ) {
   // The middle of the block, not its corner — explosions measure from a point.
@@ -57,7 +65,7 @@ function lightTheFuse(
       breaksBlocks: true,
       causesFire: false,
     });
-  }, FUSE_TICKS);
+  }, fuseTicks);
 }
 
 world.afterEvents.playerInteractWithBlock.subscribe((event) => {
@@ -66,7 +74,25 @@ world.afterEvents.playerInteractWithBlock.subscribe((event) => {
   if (!tnt) return;
   if (itemStack?.typeId !== LIGHTER) return;
 
-  lightTheFuse(block.dimension, block.location, tnt, player);
+  lightTheFuse(block.dimension, block.location, tnt, FUSE_TICKS, player);
+});
+
+// ── Chain reactions ─────────────────────────────────────────────────
+// Ordinary TNT caught in an explosion is primed rather than broken, which is
+// why a stack of it cascades. Ours is a custom block, so the game just breaks
+// it — this puts the cascade back. blockExplode tells us what the block WAS,
+// which is the only reason this is possible: by the time we hear about it, the
+// block is already gone.
+world.afterEvents.blockExplode.subscribe((event) => {
+  const tnt = TNT_BY_BLOCK.get(event.explodedBlockPermutation.type.id);
+  if (!tnt) return;
+
+  const fuse =
+    CHAIN_FUSE_MIN +
+    Math.floor(Math.random() * (CHAIN_FUSE_MAX - CHAIN_FUSE_MIN + 1));
+
+  // Full strength, exactly as if it had been lit by hand.
+  lightTheFuse(event.dimension, event.block.location, tnt, fuse);
 });
 
 // ── Say hello ───────────────────────────────────────────────────────
