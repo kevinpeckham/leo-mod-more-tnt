@@ -27,6 +27,7 @@ const TNT_TYPES = [
   { block: "tnt:tnt_2x", name: "2x TNT", radius: 5 },
   { block: "tnt:tnt_5x", name: "5x TNT", radius: 7 },
   { block: "tnt:tnt_10x", name: "10x TNT", radius: 9 },
+  { block: "tnt:tnt_20x", name: "20x TNT", radius: 11 },
 ];
 
 const TNT_BY_BLOCK = new Map(TNT_TYPES.map((tnt) => [tnt.block, tnt]));
