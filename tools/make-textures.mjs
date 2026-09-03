@@ -15,7 +15,6 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { deflateSync, inflateSync } from "node:zlib";
 
 const SOURCE = "tools/vanilla-textures/tnt_side.png";
-const OUTPUT = "resource_pack/textures/blocks/tnt_2x_side.png";
 
 // The label band and its lettering, measured from the vanilla texture.
 const INK = [0x37, 0x36, 0x56]; // the blue the letters are drawn in
@@ -23,10 +22,22 @@ const INK_SHADOW = [0x1b, 0x1a, 0x3c]; // the darker blue under them
 const BAND_TOP = 5;
 const BAND_BOTTOM = 10;
 
-// "2x", drawn to sit on the same rows the vanilla letters use. A dot is the
-// label's own colour showing through; a hash is ink. Change these to change
-// what the block says.
-const GLYPHS = ["###....", "..#.#.#", ".#...#.", "###.#.#"];
+// One entry per kind of TNT. The drawing is a little picture: a hash is ink,
+// a dot is the label showing through. Four rows, because that's how tall the
+// vanilla lettering is. Add an entry here, run `npm run textures`, and you have
+// the label for a new TNT.
+const LABELS = [
+  {
+    name: "2x",
+    out: "resource_pack/textures/blocks/tnt_2x_side.png",
+    glyphs: ["###....", "..#....", "###.#.#", "#....#.", "###.#.#"],
+  },
+  {
+    name: "5x",
+    out: "resource_pack/textures/blocks/tnt_5x_side.png",
+    glyphs: ["###....", "#......", "###.#.#", "..#..#.", "###.#.#"],
+  },
+];
 // ─────────────────────────────────────────────────────────── PNG reading ────
 function decodePng(buffer) {
   const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -208,56 +219,61 @@ function encodePng({ width, height, pixels }) {
 }
 
 // ────────────────────────────────────────────────────────────── drawing ────
-const image = decodePng(readFileSync(SOURCE));
-const { width, pixels } = image;
-const at = (x, y) => (y * width + x) * 4;
-const isInk = (i) =>
-  [INK, INK_SHADOW].some(
-    (c) =>
-      pixels[i] === c[0] && pixels[i + 1] === c[1] && pixels[i + 2] === c[2],
-  );
-
-// Rub out the vanilla lettering. Each erased pixel takes the colour of the
-// nearest plain label pixel in its own row, so the band keeps its shading
-// instead of turning into a flat grey stripe.
-let erased = 0;
-for (let y = BAND_TOP; y <= BAND_BOTTOM; y++) {
-  const plain = [];
-  for (let x = 0; x < width; x++) if (!isInk(at(x, y))) plain.push(x);
-  if (plain.length === 0) continue;
-
-  for (let x = 0; x < width; x++) {
-    const i = at(x, y);
-    if (!isInk(i)) continue;
-    const nearest = plain.reduce((a, b) =>
-      Math.abs(b - x) < Math.abs(a - x) ? b : a,
+for (const label of LABELS) {
+  const image = decodePng(readFileSync(SOURCE));
+  const { width, pixels } = image;
+  const at = (x, y) => (y * width + x) * 4;
+  const isInk = (i) =>
+    [INK, INK_SHADOW].some(
+      (c) =>
+        pixels[i] === c[0] && pixels[i + 1] === c[1] && pixels[i + 2] === c[2],
     );
-    const from = at(nearest, y);
-    pixels[i] = pixels[from];
-    pixels[i + 1] = pixels[from + 1];
-    pixels[i + 2] = pixels[from + 2];
-    erased++;
+
+  // Rub out the vanilla lettering. Each erased pixel takes the colour of the
+  // nearest plain label pixel in its own row, so the band keeps its shading
+  // instead of turning into a flat grey stripe.
+  let erased = 0;
+  for (let y = BAND_TOP; y <= BAND_BOTTOM; y++) {
+    const plain = [];
+    for (let x = 0; x < width; x++) if (!isInk(at(x, y))) plain.push(x);
+    if (plain.length === 0) continue;
+
+    for (let x = 0; x < width; x++) {
+      const i = at(x, y);
+      if (!isInk(i)) continue;
+      const nearest = plain.reduce((a, b) =>
+        Math.abs(b - x) < Math.abs(a - x) ? b : a,
+      );
+      const from = at(nearest, y);
+      pixels[i] = pixels[from];
+      pixels[i + 1] = pixels[from + 1];
+      pixels[i + 2] = pixels[from + 2];
+      erased++;
+    }
   }
-}
 
-// Paint the new label, centred on the band.
-const glyphWidth = Math.max(...GLYPHS.map((row) => row.length));
-const left = Math.floor((width - glyphWidth) / 2);
-const top = BAND_TOP + 1;
-let painted = 0;
-GLYPHS.forEach((row, dy) => {
-  [...row].forEach((cell, dx) => {
-    if (cell !== "#") return;
-    const i = at(left + dx, top + dy);
-    // The bottom row of the label sits in shadow in the original, so ink there
-    // uses the darker blue and the letters don't look pasted on.
-    const ink = dy === GLYPHS.length - 1 ? INK_SHADOW : INK;
-    [pixels[i], pixels[i + 1], pixels[i + 2]] = ink;
-    painted++;
+  // Paint the new label, centred on the band.
+  // Centre whatever height the glyphs are within the band.
+  const top =
+    BAND_TOP +
+    Math.floor((BAND_BOTTOM - BAND_TOP + 1 - label.glyphs.length) / 2);
+  const glyphWidth = Math.max(...label.glyphs.map((row) => row.length));
+  const left = Math.floor((width - glyphWidth) / 2);
+  let painted = 0;
+  label.glyphs.forEach((row, dy) => {
+    [...row].forEach((cell, dx) => {
+      if (cell !== "#") return;
+      const i = at(left + dx, top + dy);
+      // The bottom row of the label sits in shadow in the original, so ink
+      // there uses the darker blue and the letters don't look pasted on.
+      const ink = dy === label.glyphs.length - 1 ? INK_SHADOW : INK;
+      [pixels[i], pixels[i + 1], pixels[i + 2]] = ink;
+      painted++;
+    });
   });
-});
 
-writeFileSync(OUTPUT, encodePng(image));
-console.log(
-  `✅ ${OUTPUT} — erased ${erased}px of "TNT", painted ${painted}px of "2x"`,
-);
+  writeFileSync(label.out, encodePng(image));
+  console.log(
+    `✅ ${label.out} — erased ${erased}px of "TNT", painted ${painted}px of "${label.name}"`,
+  );
+}

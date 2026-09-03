@@ -4,6 +4,11 @@
   "padding": 8,
   "num_mip_levels": 4,
   "texture_data": {
-    "tnt_2x_side": { "textures": "textures/blocks/tnt_2x_side" }
+    "tnt_2x_side": {
+      "textures": "textures/blocks/tnt_2x_side"
+    },
+    "tnt_5x_side": {
+      "textures": "textures/blocks/tnt_5x_side"
+    }
   }
 }

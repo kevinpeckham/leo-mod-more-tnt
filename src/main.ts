@@ -10,29 +10,35 @@ import {
 // This mod has its own world (the TNT world on port 19134), so anything here
 // can be as explosive as Leo likes without touching his builds next door.
 
-// ── 2x TNT ──────────────────────────────────────────────────────────
-// Craft it from two ordinary TNT, anywhere in the crafting grid. It looks like
-// TNT with "2x" on the side, and it blows a hole twice the size.
+// ── The TNT ─────────────────────────────────────────────────────────
+// One entry per kind of TNT. To add another: put a line here, add a block and
+// a recipe in pack/, a label in tools/make-textures.mjs, and a name in
+// resource_pack/texts/en_US.lang. Nothing else needs touching.
 //
-// The pieces:
-//   pack/blocks/tnt_2x.json     the block itself
-//   pack/recipes/tnt_2x.json    the crafting recipe
-//   resource_pack/textures/     the "2x" label, made by npm run textures
-//   here                        what happens when you light it
-const TNT_2X = "tnt:tnt_2x";
-const LIGHTER = "minecraft:flint_and_steel";
+// About `radius`: it's the number Minecraft calls explosion power, and vanilla
+// TNT is 4. It is NOT "how many blocks across" — and doubling it does NOT
+// double the hole, because a ball grows with the CUBE of its radius. To make a
+// hole N times bigger, multiply 4 by the cube root of N:
+//
+//   2 TNT worth -> 4 x ∛2 = 5
+//   5 TNT worth -> 4 x ∛5 = 7
+const TNT_TYPES = [
+  { block: "tnt:tnt_2x", name: "2x TNT", radius: 5 },
+  { block: "tnt:tnt_5x", name: "5x TNT", radius: 7 },
+];
 
-// Vanilla TNT explodes with a power of 4, and createExplosion takes that same
-// number. 8 was wrong: doubling the radius makes roughly EIGHT times the hole,
-// because a sphere grows with the cube of its radius. Two TNT side by side make
-// about twice the hole, and twice the volume means radius x cube-root-of-2,
-// which is 4 x 1.26 ≈ 5.
-const BLAST_RADIUS = 5;
+const TNT_BY_BLOCK = new Map(TNT_TYPES.map((tnt) => [tnt.block, tnt]));
+const LIGHTER = "minecraft:flint_and_steel";
 
 // 4 seconds, the same fuse as ordinary TNT, so it feels familiar.
 const FUSE_TICKS = 80;
 
-function lightTheFuse(dimension: Dimension, location: Vector3, litBy?: Player) {
+function lightTheFuse(
+  dimension: Dimension,
+  location: Vector3,
+  tnt: { name: string; radius: number },
+  litBy?: Player,
+) {
   // The middle of the block, not its corner — explosions measure from a point.
   const centre = {
     x: location.x + 0.5,
@@ -44,10 +50,10 @@ function lightTheFuse(dimension: Dimension, location: Vector3, litBy?: Player) {
   // fuse rather than an instant bang, and it gives you time to run.
   dimension.getBlock(location)?.setType("minecraft:air");
   dimension.playSound("random.fuse", centre);
-  litBy?.sendMessage("§c💥 2x TNT lit — run!");
+  litBy?.sendMessage(`§c💥 ${tnt.name} lit — run!`);
 
   system.runTimeout(() => {
-    dimension.createExplosion(centre, BLAST_RADIUS, {
+    dimension.createExplosion(centre, tnt.radius, {
       breaksBlocks: true,
       causesFire: false,
     });
@@ -56,10 +62,11 @@ function lightTheFuse(dimension: Dimension, location: Vector3, litBy?: Player) {
 
 world.afterEvents.playerInteractWithBlock.subscribe((event) => {
   const { block, itemStack, player } = event;
-  if (block.typeId !== TNT_2X) return;
+  const tnt = TNT_BY_BLOCK.get(block.typeId);
+  if (!tnt) return;
   if (itemStack?.typeId !== LIGHTER) return;
 
-  lightTheFuse(block.dimension, block.location, player);
+  lightTheFuse(block.dimension, block.location, tnt, player);
 });
 
 // ── Say hello ───────────────────────────────────────────────────────
@@ -70,7 +77,7 @@ world.afterEvents.playerSpawn.subscribe((event) => {
   system.runTimeout(() => {
     event.player.onScreenDisplay.setTitle("§cMore TNT!");
     event.player.sendMessage(
-      "§eCraft 2 TNT together to make §c2x TNT§e, then light it with flint and steel.",
+      "§eCraft 2 TNT into §c2x TNT§e, or 5 into §c5x TNT§e. Light with flint and steel.",
     );
   }, 60);
 });
