@@ -1,13 +1,13 @@
 {
   "format_version": 2,
   "header": {
-    "name": "Leo's More TNT Textures v1.0.5",
-    "description": "Looks for Leo's More TNT. (v1.0.5)",
+    "name": "Leo's More TNT Textures v1.0.6",
+    "description": "Looks for Leo's More TNT. (v1.0.6)",
     "uuid": "316703b9-26d2-4884-baab-080263b7fe7c",
     "version": [
       1,
       0,
-      5
+      6
     ],
     "min_engine_version": [
       1,
@@ -23,7 +23,7 @@
       "version": [
         1,
         0,
-        5
+        6
       ]
     }
   ]

@@ -1,13 +1,13 @@
 {
   "format_version": 2,
   "header": {
-    "name": "Leo's More TNT v1.0.5",
-    "description": "More TNT! Designed by Leo. (v1.0.5)",
+    "name": "Leo's More TNT v1.0.6",
+    "description": "More TNT! Designed by Leo. (v1.0.6)",
     "uuid": "fd09e934-3420-4f77-b07e-3316cc9aa6c5",
     "version": [
       1,
       0,
-      5
+      6
     ],
     "min_engine_version": [
       1,
@@ -24,7 +24,7 @@
       "version": [
         1,
         0,
-        5
+        6
       ],
       "entry": "scripts/main.js"
     }
