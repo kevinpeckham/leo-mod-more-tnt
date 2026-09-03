@@ -33,6 +33,18 @@ const LABELS = [
     glyphs: ["###....", "..#....", "###.#.#", "#....#.", "###.#.#"],
   },
   {
+    // "10x" is three characters, so it's wider — it still centres itself.
+    name: "10x",
+    out: "resource_pack/textures/blocks/tnt_10x_side.png",
+    glyphs: [
+      ".#..###....",
+      "##..#.#....",
+      ".#..#.#.#.#",
+      ".#..#.#..#.",
+      "###.###.#.#",
+    ],
+  },
+  {
     name: "5x",
     out: "resource_pack/textures/blocks/tnt_5x_side.png",
     glyphs: ["###....", "#......", "###.#.#", "..#..#.", "###.#.#"],

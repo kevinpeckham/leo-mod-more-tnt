@@ -9,6 +9,9 @@
     },
     "tnt_5x_side": {
       "textures": "textures/blocks/tnt_5x_side"
+    },
+    "tnt_10x_side": {
+      "textures": "textures/blocks/tnt_10x_side"
     }
   }
 }
