@@ -26,6 +26,17 @@ Two kinds of bigger TNT, and they chain.
 Anywhere in the crafting grid — the recipes are shapeless, so the pattern
 doesn't matter. Light with flint and steel; same 4-second fuse as ordinary TNT.
 
+**Undo.** Every block an explosion destroys is written down, so you can flatten
+somewhere, look at the crater, and put it all back:
+
+- **hold a clock and use it** — no typing
+- or type **`/scriptevent tnt:undo`**
+
+It restores everything since the last undo, including the TNT block you lit, and
+it covers ordinary TNT blasts too. Blocks you placed after the blast get
+overwritten if they're in the crater — it's an undo, not a merge. The list is
+forgotten when the server restarts.
+
 **They chain.** Caught in someone else's blast, they light rather than simply
 breaking — at full strength, on a short random fuse, exactly as vanilla TNT
 behaves. Rows of them ripple. Mixed chains work too: vanilla TNT sets off
