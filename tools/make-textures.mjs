@@ -33,6 +33,20 @@ const LABELS = [
     glyphs: ["###....", "..#....", "###.#.#", "#....#.", "###.#.#"],
   },
   {
+    // Four characters, 15 pixels wide — as wide as the label will take.
+    name: "100x",
+    out: "resource_pack/textures/blocks/tnt_100x_side.png",
+    // The "1" is drawn two wide rather than three, so the whole label fits
+    // with a pixel to spare either side instead of touching the edges.
+    glyphs: [
+      ".#.###.###....",
+      "##.#.#.#.#....",
+      ".#.#.#.#.#.#.#",
+      ".#.#.#.#.#..#.",
+      "##.###.###.#.#",
+    ],
+  },
+  {
     name: "50x",
     out: "resource_pack/textures/blocks/tnt_50x_side.png",
     glyphs: [
