@@ -23,6 +23,11 @@ import {
 //
 //   2 TNT worth -> 4 x ∛2 = 5
 //   5 TNT worth -> 4 x ∛5 = 7
+// A ring entry means "and this many more blasts, spaced evenly around a circle
+// this many blocks out". One huge explosion is wasteful — its rays lose energy
+// passing through rock, so most of the power is spent on stone it has already
+// broken. Several smaller ones spread around a circle dig far more ground for
+// the same TNT.
 const TNT_TYPES = [
   { block: "tnt:tnt_2x", name: "2x TNT", radius: 5 },
   { block: "tnt:tnt_5x", name: "5x TNT", radius: 7 },
@@ -30,7 +35,23 @@ const TNT_TYPES = [
   { block: "tnt:tnt_20x", name: "20x TNT", radius: 11 },
   { block: "tnt:tnt_50x", name: "50x TNT", radius: 15 },
   { block: "tnt:tnt_100x", name: "100x TNT", radius: 19 },
+  {
+    // 1000 TNT, as twenty blasts of fifty rather than one impossible one:
+    // one in the middle, six in a close ring, thirteen in a wide ring.
+    block: "tnt:tnt_1000x",
+    name: "1000x TNT",
+    radius: 15, // each blast is a 50x
+    rings: [
+      { count: 6, distance: 12 },
+      { count: 13, distance: 24 },
+    ],
+  },
 ];
+
+// Blasts in a ring go off a few ticks apart, so it rolls outwards instead of
+// happening all in one instant — better to watch, and it spreads the work out
+// rather than asking the server to do everything in a single tick.
+const BLAST_STAGGER_TICKS = 2;
 
 const TNT_BY_BLOCK = new Map(TNT_TYPES.map((tnt) => [tnt.block, tnt]));
 const LIGHTER = "minecraft:flint_and_steel";
@@ -45,10 +66,38 @@ const FUSE_TICKS = 80;
 const CHAIN_FUSE_MIN = 10;
 const CHAIN_FUSE_MAX = 30;
 
+// Where the blasts go: always one at the centre, then each ring in turn.
+function blastPoints(
+  tnt: { radius: number; rings?: { count: number; distance: number }[] },
+  centre: Vector3,
+) {
+  const points = [{ location: centre, delay: 0 }];
+
+  for (const ring of tnt.rings ?? []) {
+    for (let n = 0; n < ring.count; n++) {
+      const angle = (n / ring.count) * Math.PI * 2;
+      points.push({
+        location: {
+          x: centre.x + Math.cos(angle) * ring.distance,
+          y: centre.y,
+          z: centre.z + Math.sin(angle) * ring.distance,
+        },
+        delay: points.length * BLAST_STAGGER_TICKS,
+      });
+    }
+  }
+
+  return points;
+}
+
 function lightTheFuse(
   dimension: Dimension,
   location: Vector3,
-  tnt: { name: string; radius: number },
+  tnt: {
+    name: string;
+    radius: number;
+    rings?: { count: number; distance: number }[];
+  },
   fuseTicks: number,
   litBy?: Player,
 ) {
@@ -71,10 +120,21 @@ function lightTheFuse(
   litBy?.sendMessage(`§c💥 ${tnt.name} lit — run!`);
 
   system.runTimeout(() => {
-    dimension.createExplosion(centre, tnt.radius, {
-      breaksBlocks: true,
-      causesFire: false,
-    });
+    for (const point of blastPoints(tnt, centre)) {
+      if (point.delay === 0) {
+        dimension.createExplosion(point.location, tnt.radius, {
+          breaksBlocks: true,
+          causesFire: false,
+        });
+      } else {
+        system.runTimeout(() => {
+          dimension.createExplosion(point.location, tnt.radius, {
+            breaksBlocks: true,
+            causesFire: false,
+          });
+        }, point.delay);
+      }
+    }
   }, fuseTicks);
 }
 

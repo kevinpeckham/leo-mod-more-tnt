@@ -21,6 +21,9 @@
     },
     "tnt_100x_side": {
       "textures": "textures/blocks/tnt_100x_side"
+    },
+    "tnt_1000x_side": {
+      "textures": "textures/blocks/tnt_1000x_side"
     }
   }
 }
