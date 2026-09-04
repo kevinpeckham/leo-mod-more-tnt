@@ -22,6 +22,33 @@ Two kinds of bigger TNT, and they chain.
 |---|---|---|---|
 | **2x TNT** | 2 TNT | `2x` | about two TNT's worth |
 | **5x TNT** | 5 TNT | `5x` | about five TNT's worth |
+| **10x** | 10 TNT, or 2× 5x | `10x` | radius 9 |
+| **20x** | 20 TNT, or 2× 10x | `20x` | radius 11 |
+| **50x** | 50 TNT, or 5× 10x | `50x` | radius 15 |
+| **100x** | 2× 50x, or 5× 20x | `100x` | radius 19 |
+| **1000x** | 10× 100x, or 20× 50x | `1000` | **twenty** blasts in rings |
+
+Every tier can be built from the ones below it, and each shortcut is the same
+amount of TNT by another road. 100x and 1000x have no plain-TNT recipe, because
+a stack only holds 64.
+
+### Why 1000x is a ring rather than one huge blast
+
+An explosion fires rays that lose energy passing through each block, so a very
+large one spends most of its power on rock it has already broken. Measured in
+solid stone:
+
+| | Blocks destroyed |
+|---|---|
+| 100x — one blast, radius 19 | 394 |
+| 1000x — twenty blasts of radius 15, in rings | 4,525 |
+
+Ten times the TNT, eleven times the hole — where making a single blast bigger
+would have given far less. The blasts go off two ticks apart so it rolls
+outwards rather than landing in one tick, which also spreads the work.
+
+`rings` is a property any TNT kind can have; the others simply have one blast
+at the centre.
 
 Anywhere in the crafting grid — the recipes are shapeless, so the pattern
 doesn't matter. Light with flint and steel; same 4-second fuse as ordinary TNT.
