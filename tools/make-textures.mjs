@@ -33,6 +33,17 @@ const LABELS = [
     glyphs: ["###....", "..#....", "###.#.#", "#....#.", "###.#.#"],
   },
   {
+    name: "50x",
+    out: "resource_pack/textures/blocks/tnt_50x_side.png",
+    glyphs: [
+      "###.###....",
+      "#...#.#....",
+      "###.#.#.#.#",
+      "..#.#.#..#.",
+      "###.###.#.#",
+    ],
+  },
+  {
     name: "20x",
     out: "resource_pack/textures/blocks/tnt_20x_side.png",
     glyphs: [

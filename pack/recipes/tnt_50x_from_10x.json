@@ -1,0 +1,20 @@
+{
+  "format_version": "1.12",
+  "minecraft:recipe_shapeless": {
+    "description": {
+      "identifier": "tnt:tnt_50x_from_10x"
+    },
+    "tags": ["crafting_table"],
+    "priority": 0,
+    "ingredients": [
+      {
+        "item": "tnt:tnt_10x",
+        "count": 5
+      }
+    ],
+    "result": {
+      "item": "tnt:tnt_50x",
+      "count": 1
+    }
+  }
+}
