@@ -34,7 +34,15 @@ const TNT_TYPES = [
   { block: "tnt:tnt_10x", name: "10x TNT", radius: 9 },
   { block: "tnt:tnt_20x", name: "20x TNT", radius: 11 },
   { block: "tnt:tnt_50x", name: "50x TNT", radius: 15 },
-  { block: "tnt:tnt_100x", name: "100x TNT", radius: 19 },
+  {
+    // 100 TNT as five blasts of twenty — one in the middle, four around it —
+    // rather than one of a hundred. A single radius-19 blast dug only 394
+    // blocks out of solid stone; spreading the same TNT digs far more.
+    block: "tnt:tnt_100x",
+    name: "100x TNT",
+    radius: 11, // each blast is a 20x
+    rings: [{ count: 4, distance: 8 }],
+  },
   {
     // 1000 TNT, as twenty blasts of fifty rather than one impossible one:
     // one in the middle, six in a close ring, thirteen in a wide ring.
