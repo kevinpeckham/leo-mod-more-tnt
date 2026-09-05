@@ -48,7 +48,11 @@ const TNT_TYPES = [
     // one in the middle, six in a close ring, thirteen in a wide ring.
     block: "tnt:tnt_1000x",
     name: "1000x TNT",
-    radius: 15, // each blast is a 50x
+    // Leo asked for three and a half times the blast radius: 15 -> 52.
+    // The rings stay where they are, because the server only simulates about
+    // 64 blocks around a player (tick-distance is 4 chunks) and blasts outside
+    // that do nothing at all. 24 out plus a 52 radius already pushes at that.
+    radius: 52,
     rings: [
       { count: 6, distance: 12 },
       { count: 13, distance: 24 },
@@ -175,9 +179,10 @@ type DestroyedBlock = {
 };
 
 const UNDO_TOOL = "minecraft:clock";
-// A 5x blast is a few hundred blocks, so this is a lot of testing. It stops the
-// list growing forever if nobody ever undoes.
-const MAX_REMEMBERED = 60000;
+// One 1000x can destroy well over 25,000 blocks, so this needs headroom — at
+// 60,000 a couple of big blasts would fill it and undo would quietly stop
+// recording. Ten or so of the largest blasts now fit.
+const MAX_REMEMBERED = 300000;
 
 let destroyed: DestroyedBlock[] = [];
 let warnedFull = false;
