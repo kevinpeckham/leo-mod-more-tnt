@@ -48,11 +48,13 @@ const TNT_TYPES = [
     // one in the middle, six in a close ring, thirteen in a wide ring.
     block: "tnt:tnt_1000x",
     name: "1000x TNT",
-    // Leo asked for three and a half times the blast radius: 15 -> 52.
+    // Two and a half times the original blast radius: 15 -> 37.5. Leo tried
+    // 3.5x (52) and wanted it pulled back. The radius takes a decimal, so
+    // there's no need to round it.
     // The rings stay where they are, because the server only simulates about
     // 64 blocks around a player (tick-distance is 4 chunks) and blasts outside
-    // that do nothing at all. 24 out plus a 52 radius already pushes at that.
-    radius: 52,
+    // that do nothing at all. 24 out plus this radius already reaches past it.
+    radius: 37.5,
     rings: [
       { count: 6, distance: 12 },
       { count: 13, distance: 24 },
