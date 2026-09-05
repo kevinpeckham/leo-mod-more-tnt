@@ -189,6 +189,14 @@ const MAX_REMEMBERED = 300000;
 let destroyed: DestroyedBlock[] = [];
 let warnedFull = false;
 
+// The list above lives in the script's memory, so it starts empty every time
+// the mod is deployed or the server restarts — anything blown up before that
+// can no longer be put back. Say so out loud, because losing an undo silently
+// is worse than losing it loudly.
+system.run(() => {
+  world.sendMessage("§7(Mod reloaded — undo history is empty from here.)");
+});
+
 function remember(
   dimension: Dimension,
   location: Vector3,
