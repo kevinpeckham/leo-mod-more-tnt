@@ -60,6 +60,22 @@ const TNT_TYPES = [
       { count: 13, distance: 24 },
     ],
   },
+  {
+    // Ten thousand. Wider isn't available — past about 64 blocks the server
+    // isn't simulating, and blasts there do nothing — so this one goes DEEP
+    // instead: the same rings repeated well above and well below, plus a wide
+    // ring right at the edge of what's simulated. Forty-eight blasts.
+    block: "tnt:tnt_10000x",
+    name: "10000x TNT",
+    radius: 37.5,
+    rings: [
+      { count: 6, distance: 12 },
+      { count: 13, distance: 24 },
+      { count: 12, distance: 40 },
+      { count: 8, distance: 18, dy: -40 },
+      { count: 8, distance: 18, dy: 40 },
+    ],
+  },
 ];
 
 // Blasts in a ring go off a few ticks apart, so it rolls outwards instead of
@@ -82,7 +98,10 @@ const CHAIN_FUSE_MAX = 30;
 
 // Where the blasts go: always one at the centre, then each ring in turn.
 function blastPoints(
-  tnt: { radius: number; rings?: { count: number; distance: number }[] },
+  tnt: {
+    radius: number;
+    rings?: { count: number; distance: number; dy?: number }[];
+  },
   centre: Vector3,
 ) {
   const points = [{ location: centre, delay: 0 }];
@@ -93,7 +112,11 @@ function blastPoints(
       points.push({
         location: {
           x: centre.x + Math.cos(angle) * ring.distance,
-          y: centre.y,
+          // dy lifts or drops a whole ring. Going wider is capped by how far
+          // the server simulates around a player (about 64 blocks), but going
+          // up and down stays inside that same column — so height is where the
+          // room to grow is.
+          y: centre.y + (ring.dy ?? 0),
           z: centre.z + Math.sin(angle) * ring.distance,
         },
         delay: points.length * BLAST_STAGGER_TICKS,
@@ -110,7 +133,7 @@ function lightTheFuse(
   tnt: {
     name: string;
     radius: number;
-    rings?: { count: number; distance: number }[];
+    rings?: { count: number; distance: number; dy?: number }[];
   },
   fuseTicks: number,
   litBy?: Player,

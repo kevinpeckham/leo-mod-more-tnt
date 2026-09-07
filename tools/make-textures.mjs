@@ -33,6 +33,18 @@ const LABELS = [
     glyphs: ["###....", "..#....", "###.#.#", "#....#.", "###.#.#"],
   },
   {
+    // "10000" won't fit, so the block says 10K.
+    name: "10K",
+    out: "resource_pack/textures/blocks/tnt_10000x_side.png",
+    glyphs: [
+      ".#.###.#.#",
+      "##.#.#.##.",
+      ".#.#.#.#..",
+      ".#.#.#.##.",
+      "##.###.#.#",
+    ],
+  },
+  {
     // "1000x" is five characters and won't fit in sixteen pixels, so the block
     // face says 1000 — the item is still called 1000x TNT.
     name: "1000",
