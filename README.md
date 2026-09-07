@@ -98,9 +98,23 @@ somewhere, look at the crater, and put it all back:
 - or type **`/scriptevent tnt:undo`**
 
 It restores everything since the last undo, including the TNT block you lit, and
-it covers ordinary TNT blasts too. Blocks you placed after the blast get
-overwritten if they're in the crater — it's an undo, not a merge. The list is
-forgotten when the server restarts.
+it covers ordinary TNT blasts too.
+
+**If it says some blocks were too far away**, that's the 64-block ceiling again:
+the game won't touch a chunk it isn't ticking. Those blocks are kept rather than
+thrown away — walk over there and undo again and they go back.
+
+What undo can't put back:
+
+- **Blocks that fell over as a side effect** — a torch dropping because its wall
+  went, sand collapsing into the hole. The game never reports those as part of
+  the explosion, so the mod never sees them.
+- **Items and mobs.** Blocks only.
+- **Anything from before a restart or a deploy**, since the list lives in memory.
+  The mod says so in chat when it loads.
+
+Blocks you placed after the blast get overwritten if they're in the crater —
+it's an undo, not a merge.
 
 **They chain.** Caught in someone else's blast, they light rather than simply
 breaking — at full strength, on a short random fuse, exactly as vanilla TNT

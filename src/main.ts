@@ -270,24 +270,41 @@ function undoEverything(player?: Player) {
   }
 
   let restored = 0;
+  // Blocks we couldn't reach this time. The game refuses to touch a chunk it
+  // isn't ticking, and a big crater easily reaches past that — so rather than
+  // throwing those away and losing them for good, we keep them. Walk over
+  // there, undo again, and they go back.
+  const unreachable: DestroyedBlock[] = [];
+
   for (let i = destroyed.length - 1; i >= 0; i--) {
     const note = destroyed[i];
-    // The chunk may not be loaded any more; skip rather than fail the lot.
     try {
       const block = world
         .getDimension(note.dimensionId)
         .getBlock(note.location);
-      if (!block) continue;
+      if (!block) {
+        unreachable.push(note);
+        continue;
+      }
       block.setPermutation(note.permutation);
       restored++;
     } catch {
-      // Out of the world, or unloaded. Nothing sensible to do about it.
+      unreachable.push(note);
     }
   }
 
-  destroyed = [];
+  // Keep the leftovers in the same order they were recorded, so a second undo
+  // still restores oldest-last and the ground ends up as it started.
+  unreachable.reverse();
+  destroyed = unreachable;
   warnedFull = false;
-  const message = `§a↩ Put back ${restored} blocks.`;
+
+  const message =
+    unreachable.length === 0
+      ? `§a↩ Put back ${restored} blocks.`
+      : `§a↩ Put back ${restored} blocks. §e${unreachable.length} were too far ` +
+        "away to reach — go closer and undo again.";
+
   if (player) player.sendMessage(message);
   else world.sendMessage(message);
 }
