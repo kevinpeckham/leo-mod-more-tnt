@@ -150,27 +150,51 @@ function lightTheFuse(
   //
   // We remove this one ourselves, so no explosion reports it — write it down
   // here or undo would put the crater back but not the TNT that made it.
-  const lit = dimension.getBlock(location);
-  if (lit) remember(dimension, location, lit.permutation);
-  lit?.setType("minecraft:air");
-  dimension.playSound("random.fuse", centre);
+  //
+  // All of this is wrapped because the game refuses to touch a chunk it isn't
+  // ticking, and throws when you try. That happens more than you'd think with
+  // the big ones: a player walks away, the far side of the pattern stops being
+  // simulated, and the call fails.
+  try {
+    const lit = dimension.getBlock(location);
+    if (lit) remember(dimension, location, lit.permutation);
+    lit?.setType("minecraft:air");
+    dimension.playSound("random.fuse", centre);
+  } catch {
+    // Not loaded any more. Nothing to remove, and the bang below will say so.
+  }
   litBy?.sendMessage(`§c💥 ${tnt.name} lit — run!`);
 
+  // A blast in a chunk the server isn't ticking throws rather than exploding.
+  // Skip those quietly: one missing blast out of forty-eight is far better
+  // than an error for each, which is what used to fill the log.
+  const bang = (at: Vector3) => {
+    try {
+      dimension.createExplosion(at, tnt.radius, {
+        breaksBlocks: true,
+        causesFire: false,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   system.runTimeout(() => {
+    let missed = 0;
     for (const point of blastPoints(tnt, centre)) {
       if (point.delay === 0) {
-        dimension.createExplosion(point.location, tnt.radius, {
-          breaksBlocks: true,
-          causesFire: false,
-        });
+        if (!bang(point.location)) missed++;
       } else {
         system.runTimeout(() => {
-          dimension.createExplosion(point.location, tnt.radius, {
-            breaksBlocks: true,
-            causesFire: false,
-          });
+          bang(point.location);
         }, point.delay);
       }
+    }
+    if (missed > 0) {
+      litBy?.sendMessage(
+        "§7(Part of the blast was too far away to happen — stay closer to see all of it.)",
+      );
     }
   }, fuseTicks);
 }
