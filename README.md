@@ -92,10 +92,21 @@ several times a second, which is why arming a charge twice in quick succession
 deliberately does *not* disarm it.
 
 **Undo.** Every block an explosion destroys is written down, so you can flatten
-somewhere, look at the crater, and put it all back:
+somewhere, look at the crater, and put it back — **one explosion at a time**,
+most recent first, like undo in any other program. Press again to go back
+further.
 
-- **hold a clock and use it** — no typing
-- or type **`/scriptevent tnt:undo`**
+- **hold a clock and use it** — undoes the last explosion
+- **crouch and use the clock** — puts *everything* back at once
+- or type **`/scriptevent tnt:undo`** for one, **`/scriptevent tnt:undoall`**
+  for the lot
+
+Blocks are grouped into explosions by when they were destroyed: anything within
+three seconds of the last one counts as the same bang, which keeps a chain
+reaction or a twenty-blast ring together as a single undo step.
+
+About ten of the very largest blasts are remembered. When it fills, the oldest
+explosions are forgotten first, so the recent ones stay undoable.
 
 It restores everything since the last undo, including the TNT block you lit, and
 it covers ordinary TNT blasts too.

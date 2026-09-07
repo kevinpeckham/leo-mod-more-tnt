@@ -227,19 +227,25 @@ type DestroyedBlock = {
   permutation: BlockPermutation;
 };
 
+// Blocks are grouped into explosions, so undo can step back one bang at a time
+// instead of putting everything back at once. A blast's blocks arrive over a
+// second or two — rings go off staggered, and chains later still — so anything
+// recorded within three seconds of the last one counts as the same explosion.
+type Blast = { blocks: DestroyedBlock[]; lastTick: number };
+
+const SAME_BLAST_TICKS = 60;
 const UNDO_TOOL = "minecraft:clock";
-// One 1000x can destroy well over 25,000 blocks, so this needs headroom — at
-// 60,000 a couple of big blasts would fill it and undo would quietly stop
-// recording. Ten or so of the largest blasts now fit.
+// Roughly ten of the very largest blasts. Oldest explosions are forgotten first
+// when it fills, so the recent ones — the ones you'd actually want back — stay.
 const MAX_REMEMBERED = 300000;
 
-let destroyed: DestroyedBlock[] = [];
-let warnedFull = false;
+let history: Blast[] = [];
+let rememberedCount = 0;
 
-// The list above lives in the script's memory, so it starts empty every time
-// the mod is deployed or the server restarts — anything blown up before that
-// can no longer be put back. Say so out loud, because losing an undo silently
-// is worse than losing it loudly.
+// The list lives in the script's memory, so it starts empty every time the mod
+// is deployed or the server restarts — anything blown up before that can no
+// longer be put back. Say so out loud, because losing an undo silently is worse
+// than losing it loudly.
 system.run(() => {
   world.sendMessage("§7(Mod reloaded — undo history is empty from here.)");
 });
@@ -249,35 +255,38 @@ function remember(
   location: Vector3,
   permutation: BlockPermutation,
 ) {
-  if (destroyed.length >= MAX_REMEMBERED) {
-    if (!warnedFull) {
-      world.sendMessage("§7(Undo memory is full — undo now to start again.)");
-      warnedFull = true;
-    }
-    return;
+  const now = system.currentTick;
+  let blast = history[history.length - 1];
+
+  if (!blast || now - blast.lastTick > SAME_BLAST_TICKS) {
+    blast = { blocks: [], lastTick: now };
+    history.push(blast);
   }
-  destroyed.push({
+
+  blast.lastTick = now;
+  blast.blocks.push({
     dimensionId: dimension.id,
     location: { x: location.x, y: location.y, z: location.z },
     permutation,
   });
+  rememberedCount++;
+
+  // Forget the oldest explosions rather than stopping recording, so undo always
+  // covers what just happened.
+  while (rememberedCount > MAX_REMEMBERED && history.length > 1) {
+    const dropped = history.shift();
+    rememberedCount -= dropped?.blocks.length ?? 0;
+  }
 }
 
-function undoEverything(player?: Player) {
-  if (destroyed.length === 0) {
-    player?.sendMessage("§7Nothing to undo — nothing has exploded yet.");
-    return;
-  }
-
+// Puts one explosion back. Blocks the game won't let us touch — anything in a
+// chunk it isn't ticking — are kept for another go rather than thrown away.
+function restoreBlast(blast: Blast) {
   let restored = 0;
-  // Blocks we couldn't reach this time. The game refuses to touch a chunk it
-  // isn't ticking, and a big crater easily reaches past that — so rather than
-  // throwing those away and losing them for good, we keep them. Walk over
-  // there, undo again, and they go back.
   const unreachable: DestroyedBlock[] = [];
 
-  for (let i = destroyed.length - 1; i >= 0; i--) {
-    const note = destroyed[i];
+  for (let i = blast.blocks.length - 1; i >= 0; i--) {
+    const note = blast.blocks[i];
     try {
       const block = world
         .getDimension(note.dimensionId)
@@ -293,18 +302,69 @@ function undoEverything(player?: Player) {
     }
   }
 
-  // Keep the leftovers in the same order they were recorded, so a second undo
-  // still restores oldest-last and the ground ends up as it started.
   unreachable.reverse();
-  destroyed = unreachable;
-  warnedFull = false;
+  rememberedCount -= restored;
+  return { restored, unreachable };
+}
 
-  const message =
-    unreachable.length === 0
-      ? `§a↩ Put back ${restored} blocks.`
-      : `§a↩ Put back ${restored} blocks. §e${unreachable.length} were too far ` +
-        "away to reach — go closer and undo again.";
+function undoLastBlast(player?: Player) {
+  const blast = history.pop();
+  if (!blast) {
+    const nothing = "§7Nothing left to undo.";
+    if (player) player.sendMessage(nothing);
+    else world.sendMessage(nothing);
+    return;
+  }
 
+  const { restored, unreachable } = restoreBlast(blast);
+
+  // Anything out of reach goes back on the pile, so walking over and undoing
+  // again finishes the job.
+  if (unreachable.length > 0) {
+    history.push({ blocks: unreachable, lastTick: blast.lastTick });
+  }
+
+  const left = history.length;
+  let message = `§a↩ Put back ${restored} blocks.`;
+  if (unreachable.length > 0) {
+    message += ` §e${unreachable.length} were too far away — go closer and undo again.`;
+  } else if (left > 0) {
+    message += ` §7${left} more explosion${left === 1 ? "" : "s"} can still be undone.`;
+  }
+
+  if (player) player.sendMessage(message);
+  else world.sendMessage(message);
+}
+
+function undoEverything(player?: Player) {
+  if (history.length === 0) {
+    const nothing = "§7Nothing to undo — nothing has exploded yet.";
+    if (player) player.sendMessage(nothing);
+    else world.sendMessage(nothing);
+    return;
+  }
+
+  let restored = 0;
+  let stuck = 0;
+  const leftovers: Blast[] = [];
+
+  while (history.length > 0) {
+    const blast = history.pop();
+    if (!blast) break;
+    const result = restoreBlast(blast);
+    restored += result.restored;
+    if (result.unreachable.length > 0) {
+      stuck += result.unreachable.length;
+      leftovers.push({ blocks: result.unreachable, lastTick: blast.lastTick });
+    }
+  }
+
+  history = leftovers.reverse();
+
+  let message = `§a↩ Put back ${restored} blocks from every explosion.`;
+  if (stuck > 0) {
+    message += ` §e${stuck} were too far away — go closer and undo again.`;
+  }
   if (player) player.sendMessage(message);
   else world.sendMessage(message);
 }
@@ -312,17 +372,21 @@ function undoEverything(player?: Player) {
 // Hold a clock and use it.
 world.afterEvents.itemUse.subscribe((event) => {
   if (event.itemStack?.typeId !== UNDO_TOOL) return;
-  undoEverything(event.source);
+  // One explosion per press, most recent first, so you can walk it back a step
+  // at a time. Crouch to put everything back at once.
+  if (event.source.isSneaking) undoEverything(event.source);
+  else undoLastBlast(event.source);
 });
 
 // Or type /scriptevent tnt:undo
 system.afterEvents.scriptEventReceive.subscribe((event) => {
-  if (event.id !== "tnt:undo") return;
+  if (event.id !== "tnt:undo" && event.id !== "tnt:undoall") return;
   const player =
     event.sourceEntity instanceof Object && "sendMessage" in event.sourceEntity
       ? (event.sourceEntity as Player)
       : undefined;
-  undoEverything(player);
+  if (event.id === "tnt:undoall") undoEverything(player);
+  else undoLastBlast(player);
 });
 
 // ── The detonator ───────────────────────────────────────────────────
