@@ -309,14 +309,20 @@ system.afterEvents.scriptEventReceive.subscribe((event) => {
 });
 
 // ── The detonator ───────────────────────────────────────────────────
-// Tap any of Leo's TNT with the detonator to arm it — as many as you like —
-// then use the detonator with nothing in front of you to set the lot off from
-// wherever you're standing. Which is the point: you get to watch.
+// Point at any of Leo's TNT and use the detonator to arm that charge — as many
+// as he likes — then look away and use it again to fire the lot from wherever
+// he's standing. Which is the point: he gets to watch.
+//
+// It works by looking, not tapping. Tapping a block with an item that has no
+// use of its own doesn't reliably register on Bedrock — the first version of
+// this did nothing at all — so instead we ask the game what the player is
+// looking at, which also means charges can be armed from across the site.
 //
 // Each player has their own armed list, so two people can rig separate charges
 // without setting off each other's.
 const DETONATOR = "tnt:detonator";
 const REMOTE_FUSE_TICKS = 20; // a second, so there's a moment before it goes
+const AIM_RANGE = 48; // how far away a charge can be armed from
 
 type ArmedCharge = {
   dimensionId: string;
@@ -326,30 +332,22 @@ type ArmedCharge = {
 
 const armed = new Map<string, ArmedCharge[]>();
 
-// Using an item ON a block fires both events, so remember when we armed
-// something and ignore the use that came with it.
-let lastArmedTick = -10;
-
-world.afterEvents.playerInteractWithBlock.subscribe((event) => {
-  const { player, block, itemStack } = event;
-  if (itemStack?.typeId !== DETONATOR) return;
-
-  const tnt = TNT_BY_BLOCK.get(block.typeId);
-  if (!tnt) {
-    player.sendMessage("§7(That isn't one of your TNTs.)");
-    return;
-  }
-
+function armOrDisarm(
+  player: Player,
+  block: { location: Vector3; dimension: Dimension },
+  tnt: (typeof TNT_TYPES)[number],
+) {
   const charges = armed.get(player.id) ?? [];
   const spot = block.location;
 
-  // Tapping the same charge twice disarms it, so a mistake is easy to undo.
+  // Aiming at the same charge again disarms it, so a mistake is easy to undo.
   const already = charges.findIndex(
     (c) =>
       c.location.x === spot.x &&
       c.location.y === spot.y &&
       c.location.z === spot.z,
   );
+
   if (already >= 0) {
     charges.splice(already, 1);
     player.sendMessage(`§7Disarmed. ${charges.length} still armed.`);
@@ -363,37 +361,50 @@ world.afterEvents.playerInteractWithBlock.subscribe((event) => {
   }
 
   armed.set(player.id, charges);
-  lastArmedTick = system.currentTick;
-});
+}
 
-world.afterEvents.itemUse.subscribe((event) => {
-  if (event.itemStack?.typeId !== DETONATOR) return;
-  // That was the tap that armed a charge, not a trigger pull.
-  if (system.currentTick - lastArmedTick <= 1) return;
-
-  const player = event.source;
+function fireArmed(player: Player) {
   const charges = armed.get(player.id) ?? [];
   if (charges.length === 0) {
-    player.sendMessage("§7Nothing armed. Tap some TNT with this first.");
+    player.sendMessage(
+      "§7Nothing armed. Point at some TNT and use this first.",
+    );
     return;
   }
 
   let fired = 0;
   for (const charge of charges) {
-    const dimension = world.getDimension(charge.dimensionId);
-    // It may have been mined or already blown up since you armed it.
-    if (dimension.getBlock(charge.location)?.typeId !== charge.tnt.block)
-      continue;
-    lightTheFuse(dimension, charge.location, charge.tnt, REMOTE_FUSE_TICKS);
-    fired++;
+    try {
+      const dimension = world.getDimension(charge.dimensionId);
+      // It may have been mined or already blown up since it was armed.
+      if (dimension.getBlock(charge.location)?.typeId !== charge.tnt.block) {
+        continue;
+      }
+      lightTheFuse(dimension, charge.location, charge.tnt, REMOTE_FUSE_TICKS);
+      fired++;
+    } catch {
+      // Too far away to be simulated any more. Skip it.
+    }
   }
 
   armed.set(player.id, []);
   player.sendMessage(
     fired > 0
       ? `§c💥 Firing ${fired} charge${fired === 1 ? "" : "s"}!`
-      : "§7Those charges are gone — nothing left to fire.",
+      : "§7Those charges are out of range or gone — nothing fired.",
   );
+}
+
+world.afterEvents.itemUse.subscribe((event) => {
+  if (event.itemStack?.typeId !== DETONATOR) return;
+
+  const player = event.source;
+  const hit = player.getBlockFromViewDirection({ maxDistance: AIM_RANGE });
+  const tnt = hit ? TNT_BY_BLOCK.get(hit.block.typeId) : undefined;
+
+  // Looking at one of Leo's TNT arms it; looking anywhere else fires.
+  if (hit && tnt) armOrDisarm(player, hit.block, tnt);
+  else fireArmed(player);
 });
 
 // ── Chain reactions ─────────────────────────────────────────────────
