@@ -25,14 +25,15 @@ Two kinds of bigger TNT, and they chain.
 | **10x** | 10 TNT, or 2× 5x | `10x` | radius 9 |
 | **20x** | 20 TNT, or 2× 10x | `20x` | radius 11 |
 | **50x** | 50 TNT, or 5× 10x | `50x` | radius 15 |
-| **100x** | 2× 50x, or 5× 20x | `100x` | radius 19 |
-| **1000x** | 10× 100x, or 20× 50x | `1000` | **twenty** blasts in rings |
+| **100x** | 2× 50x, or 5× 20x | `100x` | 5 blasts in a small ring |
+| **1000x** | 10× 100x, or 20× 50x | `1000` | 20 blasts, two rings |
+| **10000x** | 10× 1000x | `10K` | 48 blasts, rings above and below |
 
 Every tier can be built from the ones below it, and each shortcut is the same
 amount of TNT by another road. 100x and 1000x have no plain-TNT recipe, because
 a stack only holds 64.
 
-### Why 1000x is a ring rather than one huge blast
+### Why the big ones are rings rather than one huge blast
 
 An explosion fires rays that lose energy passing through each block, so a very
 large one spends most of its power on rock it has already broken. Measured in
@@ -47,8 +48,24 @@ Ten times the TNT, eleven times the hole — where making a single blast bigger
 would have given far less. The blasts go off two ticks apart so it rolls
 outwards rather than landing in one tick, which also spreads the work.
 
-`rings` is a property any TNT kind can have; the others simply have one blast
-at the centre.
+`rings` is a property any TNT kind can have; the small ones simply have one
+blast at the centre. A ring can also carry a `dy`, which lifts or drops the
+whole ring — that's how 10000x grows, since it can't grow outwards.
+
+### The 64-block ceiling
+
+`tick-distance` on the server is 4 chunks, so the game only simulates about
+**64 blocks** around a player. An explosion outside that does nothing at all —
+it doesn't even fail loudly, it simply doesn't happen.
+
+That is the real limit on how big any of this can get, and it's why 10000x adds
+blasts *above and below* rather than further out. Blasts that do land outside
+are skipped quietly and the player is told once, rather than the log filling
+with one error per missed blast (which it did, 146 times, before that was
+handled).
+
+To go wider, the lever is `tick-distance` in `server.properties` — at the cost
+of the server simulating more all the time.
 
 Anywhere in the crafting grid — the recipes are shapeless, so the pattern
 doesn't matter. Light with flint and steel; same 4-second fuse as ordinary TNT.
