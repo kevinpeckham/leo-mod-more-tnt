@@ -336,6 +336,10 @@ type ArmedCharge = {
 
 const armed = new Map<string, ArmedCharge[]>();
 
+// When a charge was last armed or disarmed, so a held button press can't
+// toggle the same one repeatedly.
+let lastArmedTick = -100;
+
 function armOrDisarm(
   player: Player,
   block: { location: Vector3; dimension: Dimension },
@@ -344,7 +348,6 @@ function armOrDisarm(
   const charges = armed.get(player.id) ?? [];
   const spot = block.location;
 
-  // Aiming at the same charge again disarms it, so a mistake is easy to undo.
   const already = charges.findIndex(
     (c) =>
       c.location.x === spot.x &&
@@ -352,13 +355,24 @@ function armOrDisarm(
       c.location.z === spot.z,
   );
 
-  if (already >= 0) {
+  // Holding the button repeats the use several times a second, so a toggle
+  // would arm and disarm the same charge over and over and land wherever it
+  // happened to stop. Disarming needs a deliberate second go, at least a
+  // second after the first, so a held press can only ever arm.
+  const now = system.currentTick;
+  const settled = now - lastArmedTick > 20;
+  lastArmedTick = now;
+
+  if (already >= 0 && settled) {
     charges.splice(already, 1);
     player.sendMessage(`§7Disarmed. ${charges.length} still armed.`);
     player.onScreenDisplay.setActionBar(
       `§7Disarmed — ${charges.length} still armed`,
     );
     player.playSound("random.click");
+  } else if (already >= 0) {
+    // Already armed and the press is part of the same hold — leave it alone.
+    return;
   } else {
     charges.push({
       dimensionId: block.dimension.id,

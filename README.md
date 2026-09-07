@@ -53,6 +53,27 @@ at the centre.
 Anywhere in the crafting grid — the recipes are shapeless, so the pattern
 doesn't matter. Light with flint and steel; same 4-second fuse as ordinary TNT.
 
+**The detonator.** An item for setting off charges from a safe distance.
+
+1. **Point at a TNT** and use the detonator — it says `✔ ARMED` on screen and
+   makes a sound. Arm as many as you like.
+2. **Back away.**
+3. **Crouch and use it** to fire the lot, one second later.
+
+On a touchscreen the reliable way is: tap the TNT to face it, back up, then
+hold down on the screen with the detonator in hand.
+
+Aiming is forgiving — landing within two blocks of a charge takes the charge.
+Pointing at the same charge again a second later disarms it. Craft it from a
+lever, redstone and an iron ingot.
+
+Two Bedrock quirks are worth knowing, because they cost us several rounds of
+"it doesn't work": using an item while aiming at a block **within arm's reach**
+counts as touching that block, and an item with no use of its own produces no
+event at all — so you must stand back. And holding the button repeats the use
+several times a second, which is why arming a charge twice in quick succession
+deliberately does *not* disarm it.
+
 **Undo.** Every block an explosion destroys is written down, so you can flatten
 somewhere, look at the crater, and put it all back:
 
