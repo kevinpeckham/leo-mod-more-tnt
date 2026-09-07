@@ -313,10 +313,14 @@ system.afterEvents.scriptEventReceive.subscribe((event) => {
 // as he likes — then look away and use it again to fire the lot from wherever
 // he's standing. Which is the point: he gets to watch.
 //
-// It works by looking, not tapping. Tapping a block with an item that has no
-// use of its own doesn't reliably register on Bedrock — the first version of
-// this did nothing at all — so instead we ask the game what the player is
-// looking at, which also means charges can be armed from across the site.
+// It works by looking, not tapping, and you must STAND BACK to use it. On
+// Bedrock, using an item while aiming at a block within arm's reach counts as
+// touching that block, and an item with no use of its own produces no event at
+// all — the first two versions of this did nothing whatsoever up close. Aim at
+// something out of reach, or at the sky, and the use registers normally.
+//
+// So: step back a few blocks, look at the charge, use the detonator. Which is
+// how a detonator ought to work anyway.
 //
 // Each player has their own armed list, so two people can rig separate charges
 // without setting off each other's.
@@ -351,6 +355,10 @@ function armOrDisarm(
   if (already >= 0) {
     charges.splice(already, 1);
     player.sendMessage(`§7Disarmed. ${charges.length} still armed.`);
+    player.onScreenDisplay.setActionBar(
+      `§7Disarmed — ${charges.length} still armed`,
+    );
+    player.playSound("random.click");
   } else {
     charges.push({
       dimensionId: block.dimension.id,
@@ -358,6 +366,11 @@ function armOrDisarm(
       tnt,
     });
     player.sendMessage(`§a✔ Armed ${tnt.name}. ${charges.length} ready.`);
+    // On screen as well as in chat, and a noise, so there's no doubt it worked.
+    player.onScreenDisplay.setActionBar(
+      `§a✔ ARMED ${tnt.name} — ${charges.length} ready. Crouch + use to fire.`,
+    );
+    player.playSound("random.orb");
   }
 
   armed.set(player.id, charges);
@@ -395,16 +408,59 @@ function fireArmed(player: Player) {
   );
 }
 
+// Aiming precisely at a block from across a field is hard, so if the ray lands
+// near a charge rather than exactly on it, take the charge.
+function tntNear(dimension: Dimension, centre: Vector3) {
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        try {
+          const block = dimension.getBlock({
+            x: centre.x + dx,
+            y: centre.y + dy,
+            z: centre.z + dz,
+          });
+          const tnt = block && TNT_BY_BLOCK.get(block.typeId);
+          if (block && tnt) return { block, tnt };
+        } catch {
+          // Not loaded. Keep looking.
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 world.afterEvents.itemUse.subscribe((event) => {
   if (event.itemStack?.typeId !== DETONATOR) return;
-
   const player = event.source;
-  const hit = player.getBlockFromViewDirection({ maxDistance: AIM_RANGE });
-  const tnt = hit ? TNT_BY_BLOCK.get(hit.block.typeId) : undefined;
 
-  // Looking at one of Leo's TNT arms it; looking anywhere else fires.
-  if (hit && tnt) armOrDisarm(player, hit.block, tnt);
-  else fireArmed(player);
+  // CROUCH to fire. Everything else arms, so aiming at the ground can never
+  // set off a charge by accident — which is what kept happening.
+  if (player.isSneaking) {
+    fireArmed(player);
+    return;
+  }
+
+  const hit = player.getBlockFromViewDirection({ maxDistance: AIM_RANGE });
+  if (!hit) {
+    player.onScreenDisplay.setActionBar("§7Point at a TNT to arm it");
+    return;
+  }
+
+  const found =
+    TNT_BY_BLOCK.get(hit.block.typeId) !== undefined
+      ? { block: hit.block, tnt: TNT_BY_BLOCK.get(hit.block.typeId) }
+      : tntNear(hit.block.dimension, hit.block.location);
+
+  if (!found?.tnt) {
+    // Say what they ARE pointing at, so it's obvious why nothing happened.
+    const name = hit.block.typeId.replace("minecraft:", "");
+    player.onScreenDisplay.setActionBar(`§7That's ${name}, not TNT`);
+    return;
+  }
+
+  armOrDisarm(player, found.block, found.tnt);
 });
 
 // ── Chain reactions ─────────────────────────────────────────────────
