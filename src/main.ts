@@ -284,6 +284,94 @@ system.afterEvents.scriptEventReceive.subscribe((event) => {
   undoEverything(player);
 });
 
+// ── The detonator ───────────────────────────────────────────────────
+// Tap any of Leo's TNT with the detonator to arm it — as many as you like —
+// then use the detonator with nothing in front of you to set the lot off from
+// wherever you're standing. Which is the point: you get to watch.
+//
+// Each player has their own armed list, so two people can rig separate charges
+// without setting off each other's.
+const DETONATOR = "tnt:detonator";
+const REMOTE_FUSE_TICKS = 20; // a second, so there's a moment before it goes
+
+type ArmedCharge = {
+  dimensionId: string;
+  location: Vector3;
+  tnt: (typeof TNT_TYPES)[number];
+};
+
+const armed = new Map<string, ArmedCharge[]>();
+
+// Using an item ON a block fires both events, so remember when we armed
+// something and ignore the use that came with it.
+let lastArmedTick = -10;
+
+world.afterEvents.playerInteractWithBlock.subscribe((event) => {
+  const { player, block, itemStack } = event;
+  if (itemStack?.typeId !== DETONATOR) return;
+
+  const tnt = TNT_BY_BLOCK.get(block.typeId);
+  if (!tnt) {
+    player.sendMessage("§7(That isn't one of your TNTs.)");
+    return;
+  }
+
+  const charges = armed.get(player.id) ?? [];
+  const spot = block.location;
+
+  // Tapping the same charge twice disarms it, so a mistake is easy to undo.
+  const already = charges.findIndex(
+    (c) =>
+      c.location.x === spot.x &&
+      c.location.y === spot.y &&
+      c.location.z === spot.z,
+  );
+  if (already >= 0) {
+    charges.splice(already, 1);
+    player.sendMessage(`§7Disarmed. ${charges.length} still armed.`);
+  } else {
+    charges.push({
+      dimensionId: block.dimension.id,
+      location: { x: spot.x, y: spot.y, z: spot.z },
+      tnt,
+    });
+    player.sendMessage(`§a✔ Armed ${tnt.name}. ${charges.length} ready.`);
+  }
+
+  armed.set(player.id, charges);
+  lastArmedTick = system.currentTick;
+});
+
+world.afterEvents.itemUse.subscribe((event) => {
+  if (event.itemStack?.typeId !== DETONATOR) return;
+  // That was the tap that armed a charge, not a trigger pull.
+  if (system.currentTick - lastArmedTick <= 1) return;
+
+  const player = event.source;
+  const charges = armed.get(player.id) ?? [];
+  if (charges.length === 0) {
+    player.sendMessage("§7Nothing armed. Tap some TNT with this first.");
+    return;
+  }
+
+  let fired = 0;
+  for (const charge of charges) {
+    const dimension = world.getDimension(charge.dimensionId);
+    // It may have been mined or already blown up since you armed it.
+    if (dimension.getBlock(charge.location)?.typeId !== charge.tnt.block)
+      continue;
+    lightTheFuse(dimension, charge.location, charge.tnt, REMOTE_FUSE_TICKS);
+    fired++;
+  }
+
+  armed.set(player.id, []);
+  player.sendMessage(
+    fired > 0
+      ? `§c💥 Firing ${fired} charge${fired === 1 ? "" : "s"}!`
+      : "§7Those charges are gone — nothing left to fire.",
+  );
+});
+
 // ── Chain reactions ─────────────────────────────────────────────────
 // Ordinary TNT caught in an explosion is primed rather than broken, which is
 // why a stack of it cascades. Ours is a custom block, so the game just breaks

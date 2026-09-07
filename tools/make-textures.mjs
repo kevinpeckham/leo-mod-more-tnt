@@ -291,6 +291,57 @@ function encodePng({ width, height, pixels }) {
   ]);
 }
 
+// ───────────────────────────────────────────────────────── drawn items ────
+// The labels above are made by editing Mojang's TNT texture. This one is drawn
+// from nothing: a plunger box, the sort you push down to set off dynamite.
+const DRAWINGS = [
+  {
+    name: "detonator",
+    out: "resource_pack/textures/items/detonator.png",
+    // . = see-through, K = outline, R = red body, Y = yellow stripe,
+    // D = dark grey handle
+    art: [
+      "................",
+      ".......DD.......",
+      ".......DD.......",
+      ".....DDDDDD.....",
+      "................",
+      "..KKKKKKKKKKKK..",
+      "..KRRRRRRRRRRK..",
+      "..KRRRRRRRRRRK..",
+      "..KRRYYYYYYRRK..",
+      "..KRRYYYYYYRRK..",
+      "..KRRRRRRRRRRK..",
+      "..KRRRRRRRRRRK..",
+      "..KKKKKKKKKKKK..",
+      "................",
+      "................",
+      "................",
+    ],
+    colours: {
+      ".": [0, 0, 0, 0],
+      K: [26, 20, 20, 255],
+      R: [190, 40, 34, 255],
+      Y: [235, 200, 60, 255],
+      D: [90, 90, 96, 255],
+    },
+  },
+];
+
+for (const drawing of DRAWINGS) {
+  const size = drawing.art.length;
+  const pixels = Buffer.alloc(size * size * 4);
+  drawing.art.forEach((row, y) => {
+    [...row].forEach((cell, x) => {
+      const colour = drawing.colours[cell];
+      const i = (y * size + x) * 4;
+      [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]] = colour;
+    });
+  });
+  writeFileSync(drawing.out, encodePng({ width: size, height: size, pixels }));
+  console.log(`✅ ${drawing.out} — drew the ${drawing.name}`);
+}
+
 // ────────────────────────────────────────────────────────────── drawing ────
 for (const label of LABELS) {
   const image = decodePng(readFileSync(SOURCE));
