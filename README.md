@@ -3,13 +3,16 @@
 Leo's second Minecraft Bedrock add-on. Built the same way as [leo-mod-01](../leo-mod-01), but it gets **its own world
 on its own server**, so experiments here can't disturb Leo's builds next door.
 
-| | Leo's World | TNT World |
-|---|---|---|
-| Address | `100.68.103.100:19132` | `100.68.103.100:19134` |
-| Mod | Leo's Mod 01 | Leo's More TNT |
-| Service | `bedrock-server` | `bedrock-tnt` |
-| Console | `tmux attach -t bds` | `tmux -L tnt attach -t tnt` |
-| Files | `/opt/bedrock-server` | `/opt/bedrock-tnt` |
+| | Leo's World | TNT World (this mod) | Health World |
+|---|---|---|---|
+| Address | `…:19132` | `…:19134` | `…:19136` |
+| Mod | Leo's Mod 01 | Leo's More TNT | [health doubler](../leo-mod-health-doubler) |
+| Mode | Creative | Creative | Survival |
+| Service | `bedrock-server` | `bedrock-tnt` | `bedrock-health` |
+| Console | `tmux attach -t bds` | `tmux -L tnt attach -t tnt` | `tmux -L health attach -t health` |
+| Files | `/opt/bedrock-server` | `/opt/bedrock-tnt` | `/opt/bedrock-health` |
+
+All on `100.68.103.100`.
 
 Add the second one on the iPads as a new server entry — same address, port
 **19134**.
