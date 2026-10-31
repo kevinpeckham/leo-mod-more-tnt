@@ -17,6 +17,11 @@ All on `100.68.103.100`.
 Add the second one on the iPads as a new server entry — same address, port
 **19134**.
 
+
+**Hit something strange?** [FINDINGS.md](../leo-mod-01/FINDINGS.md) collects the gotchas we've
+already solved across all of Leo's mods — connection failures, invisible
+mobs, recipes that silently do nothing, and the rest.
+
 ## What's here right now
 
 Two kinds of bigger TNT, and they chain.
